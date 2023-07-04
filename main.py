@@ -2,10 +2,12 @@ from datetime import datetime
 from itertools import dropwhile, takewhile
 import time
 from instaloader import instaloader as ig
-from instaloader import Post, Profile
-# from dotenv import load_dotenv
+from instaloader import Post
 import os
-from moviepy import VideoFileClip, concatenate_videoclips
+from moviepy.editor import VideoFileClip, concatenate_videoclips
+import re
+import moviepy.video.fx.all as vfx
+from random import shuffle
 
 time.sleep(2)
 
@@ -42,12 +44,46 @@ class VideoBuilder:
     def __init__(self) -> None:
         pass
 
-    def concatenate_videos(self, folder_videos: str, file_pattern: str, target: str) -> None:
-        list_videos: list[VideoFileClip] = []
+    def concat_videos_from_folder(self, folder_path: str, target: str, width: int, height: int) -> None:
+        videos: list[VideoFileClip] = []
+        mp4 = r"\.mp4$"
+        for path in os.listdir(folder_path):
+            if re.search(mp4, path):
+                video = VideoFileClip(folder_path + "/" + path)
+                video = video.fx(vfx.resize, width=width)
+                video = video.fx(vfx.resize, height=height)
+                videos.append(video)
+            
+        final_video = concatenate_videoclips(videos, method="compose")
+        final_video.write_videofile(target, threads=8)
+
+    def concat_videos(self, videos: list[VideoFileClip], target: str) -> None:
+        final_video = concatenate_videoclips(videos, method="compose")
+        final_video.write_videofile(target, threads=8)
+
+    def get_videos_from_folder(self, folder_path: str, width: int, height: int) -> list[VideoFileClip]:
+        videos: list[VideoFileClip] = []
+        mp4 = r"\.mp4$"
+        for path in os.listdir(folder_path):
+            if re.search(mp4, path):
+                video = VideoFileClip(folder_path + "/" + path)
+                video = video.fx(vfx.resize, width=width)
+                video = video.fx(vfx.resize, height=height)
+                videos.append(video)
+
+    def shuffle_videos(self, videos: list[VideoFileClip]) -> list[VideoFileClip]:
+        shuffle(videos)
+        return videos
         
 
 
 insta = InstagramScrapper()
 
-videos = insta.get_videos_from_interval("succc.exe", datetime(2023, 6, 29), datetime.now())
-insta.download_videos(videos, "succc.exe")
+# videos = insta.get_videos_from_interval("succc.exe", datetime(2023, 6, 29), datetime.now())
+# insta.download_videos(videos, "succc.exe")
+
+video_builder = VideoBuilder()
+
+video_builder.concat_videos_from_folder("./succc.exe", "results/result2.mp4")
+
+#(1920, 1080)
