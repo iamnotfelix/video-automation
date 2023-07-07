@@ -15,7 +15,7 @@ class YoutubeController:
         self.api_version = api_version
         self.client_secrets_file = client_secrets_file
 
-    def upload_video(self, video_path: str):
+    def upload_video(self, video_path: str, title: str = "Default title", description: str = "Default description", tags: list[str] = []):
 
         os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
@@ -23,23 +23,26 @@ class YoutubeController:
 
         flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(
             self.client_secrets_file, scopes)
+        
         credentials = flow.run_local_server()
+
         youtube = googleapiclient.discovery.build(
             self.api_service_name, self.api_version, credentials=credentials)
 
         request = youtube.videos().insert(
             part="snippet,status",
             body={
-            "snippet": {
-                "categoryId": "22",
-                "description": "Description of uploaded video.",
-                "title": "Test video upload."
+                "snippet": {
+                    "categoryId": "23",
+                    "title": title,
+                    "description": description,
+                    "tags": tags
+                },
+                "status": {
+                    "privacyStatus": "public",
+                    'selfDeclaredMadeForKids': False
+                }
             },
-            "status": {
-                "privacyStatus": "private"
-            }
-            },
-            
             media_body=MediaFileUpload(video_path)
         )
         response = request.execute()
