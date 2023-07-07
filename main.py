@@ -25,7 +25,7 @@ class InstagramScrapper:
     def download_videos(self, posts: list[Post], target: str) -> None:
         self.loader.download_pictures = False
         self.loader.post_metadata_txt_pattern = ""
-        self.loader.filename_pattern = target
+        # self.loader.filename_pattern = target
         for post in posts:
             self.loader.download_post(post, target)
 
@@ -71,19 +71,25 @@ class VideoBuilder:
                 video = video.fx(vfx.resize, height=height)
                 videos.append(video)
 
+        return videos
+
     def shuffle_videos(self, videos: list[VideoFileClip]) -> list[VideoFileClip]:
         shuffle(videos)
-        return videos
         
+if __name__ == "__main__":
 
 
-insta = InstagramScrapper()
+    insta = InstagramScrapper()
 
-# videos = insta.get_videos_from_interval("succc.exe", datetime(2023, 6, 29), datetime.now())
-# insta.download_videos(videos, "succc.exe")
+    # videos = insta.get_videos_from_interval("succc.exe", datetime(2023, 6, 30), datetime.now())
+    # insta.download_videos(videos, "archive")
 
-video_builder = VideoBuilder()
+    video_builder = VideoBuilder()
+    # video_builder.concat_videos_from_folder("./archive", "results/result2.mp4")
 
-video_builder.concat_videos_from_folder("./succc.exe", "results/result2.mp4")
+    videos = video_builder.get_videos_from_folder("./archive", 1920, 1080)
+    video_builder.shuffle_videos(videos)
+    videos = videos[:10]
+    video_builder.concat_videos(videos, "./results/result2.mp4")
 
-#(1920, 1080)
+    #(1920, 1080)
