@@ -1,60 +1,81 @@
-import ffmpeg
+import json
 import os
+from random import shuffle
+import subprocess
+from utils import timeit, cleanup
 
 class VideoBuilderFfmpeg:
 
     def __init__(self) -> None:
         pass
 
-    def concat_videos_from_folder(self, folder_path: str, target: str, width: int = 1920, height: int = 1080):
-        if os.path.exists(target):
-            os.remove(target)
+    def get_duration(self, file_path: str):
+        '''
+            Gets the duration in seconds of the provided file. 
+            The file must be a video, otherwise it will result in a runtime error.
+        '''
+        out = subprocess.check_output(["ffprobe", "-v", "quiet", "-show_format", "-print_format", "json", file_path])
+        ffprobe_data = json.loads(out)
+        duration_seconds = float(ffprobe_data["format"]["duration"])
+        return float(duration_seconds)
+
+    @timeit
+    def concat_videos_from_folder(
+        self, 
+        folder_path: str, 
+        target_path: str, 
+        result_name: str = "out.mp4", 
+        duration: int = 3 * 60, 
+        quiet: bool = True, 
+        width: int = -2, 
+        height: int = 1080
+        ):
+        '''
+            Takes videos from 'folder_path', resizes them, stores them temporarly, 
+            shuffles the videos, takes the wanted 'duration' in videos then it concatenated those
+            videos and stores the result in 'target_path/result_name'.
+        '''
+        # set the output, if quiet true nothing will be printed from the ffmpeg command
+        stdout = subprocess.DEVNULL if quiet else None
+
+        # create 'tmp' folder if it does not exist
+        if not os.path.exists("./tmp"):
+            os.mkdir("tmp")
         
-        # videos = [os.path.join(folder_path, path) for path in os.listdir(folder_path)]
-        # # videos = videos[:2]
+        # delete everything from 'tmp' if it exists
+        cleanup("./tmp")
 
-        # for video in videos:
-        #     (ffmpeg.input(video)
-        #      .filter("scale", width="-1", height=height)
-        #      .filter("fps", fps=30)
-        #      .output(os.path.join("test", os.path.basename(video)))
-        #      .run())
-            
-        # videos = [os.path.join("test", path) for path in os.listdir("./test")]
+        # resize and store all resized videos in 'tmp'
+        for path in os.listdir(folder_path):
+            if path.endswith(".mp4"):
+                subprocess.run(["ffmpeg", "-i", os.path.join(folder_path, path), "-vf", f"scale={width}:{height}", os.path.join("tmp", path)], stderr=stdout)
         
-        reshaped_videos = [ffmpeg.input(os.path.join("test", path)) for path in os.listdir("test")]
-        reshaped_videos = reshaped_videos[:2]
-        video_and_audio_files = [item for sublist in map(lambda f: [f.video, f.audio], reshaped_videos) for item in sublist]
+        # take all filenames from 'tmp'
+        videos = [path for path in os.listdir(folder_path)]
 
-        joined = (ffmpeg
-                  .concat(*video_and_audio_files, v=1))
+        # shuffle the videos
+        shuffle(videos)
 
-        print((ffmpeg
-         .output(joined, target, format='mp4')
-         .run()))
+        # take the first videos that add up to the wanted duration
+        count = 0
+        choosen_videos = []
+        for video in videos:
+            count += self.get_duration(os.path.join("tmp", video))
+            choosen_videos.append(video)
+            if count >= duration:
+                break
 
-        
-        # video_inputs = []
-        # audio_inputs = []
-        # for video in videos:
-        #     input = ffmpeg.input(video)
-        #     # input = ffmpeg.filter(input, "scale", width="-1", height=height)
+        # create input file for ffmpeg ('list.txt' in this case)
+        with open("./tmp/list.txt", "w") as f:
+            for video in choosen_videos:
+                f.write(f"file '{video}'\n")
 
-        #     video_input = input.video
-        #     audio_input = input.audio
+        # concat videos specified in the file
+        subprocess.run(["ffmpeg", "-f", "concat", "-i", "tmp/list.txt", "-c", "copy", os.path.join(target_path, result_name)], stderr=stdout)
 
-        #     video_inputs.append(video_input)
-        #     audio_inputs.append(audio_input)
-
-        # videos_concat = ffmpeg.concat(*video_inputs, v=1, a=0)
-        # audios_concat = ffmpeg.concat(*audio_inputs, v=0, a=1)
-
-        # concat = ffmpeg.concat(videos_concat, audios_concat, v=1, a=1)
-
-        # output = ffmpeg.output(concat, target).compile()
-        # print(output)
-
+        # clean up 'tmp'
+        cleanup("./tmp")
 
 if __name__ == "__main__":
     video_builder = VideoBuilderFfmpeg()
-    video_builder.concat_videos_from_folder("./archive", "./results/output2.mp4")
+    video_builder.concat_videos_from_folder("./archive", "./results", "out2.mp4", duration=3 * 60, quiet=True)
