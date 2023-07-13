@@ -2,24 +2,25 @@ import json
 import os
 from random import shuffle
 import subprocess
-from utils import timeit, cleanup
+from utils import cleanup
 
 class VideoBuilderFfmpeg:
+
+    """ VideoBuilderFfmpeg class provides an interface for building videos using ffmpeg. """
 
     def __init__(self) -> None:
         pass
 
     def get_duration(self, file_path: str):
-        '''
+        """
             Gets the duration in seconds of the provided file. 
             The file must be a video, otherwise it will result in a runtime error.
-        '''
+        """
         out = subprocess.check_output(["ffprobe", "-v", "quiet", "-show_format", "-print_format", "json", file_path])
         ffprobe_data = json.loads(out)
         duration_seconds = float(ffprobe_data["format"]["duration"])
         return float(duration_seconds)
 
-    @timeit
     def concat_videos_from_folder(
         self, 
         folder_path: str, 
@@ -30,11 +31,11 @@ class VideoBuilderFfmpeg:
         width: int = -2, 
         height: int = 1080
         ):
-        '''
+        """
             Takes videos from 'folder_path', resizes them, stores them temporarly, 
             shuffles the videos, takes the wanted 'duration' in videos then it concatenated those
             videos and stores the result in 'target_path/result_name'.
-        '''
+        """
         # set the output, if quiet true nothing will be printed from the ffmpeg command
         stdout = subprocess.DEVNULL if quiet else None
 
