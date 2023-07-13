@@ -2,7 +2,7 @@ import os
 import time
 
 
-def cleanup(folder_path: str):
+def cleanup(folder_path: str) -> None:
     """ Deletes all files from a folder. """
     if not os.path.exists(folder_path):
         return
