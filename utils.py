@@ -1,12 +1,9 @@
-from functools import wraps
 import os
 import time
 
 
 def cleanup(folder_path: str):
-    '''
-        Deletes all files from a folder.
-    '''
+    """ Deletes all files from a folder. """
     if not os.path.exists(folder_path):
         return
 
@@ -15,16 +12,14 @@ def cleanup(folder_path: str):
             os.remove(os.path.join(folder_path, path))
 
 
-def timeit(func):
-    '''
-        Decorator for measuring the execution time.
-    '''
-    @wraps(func)
-    def timeit_wrapper(*args, **kwargs):
-        start_time = time.perf_counter()
-        result = func(*args, **kwargs)
-        end_time = time.perf_counter()
-        total_time = end_time - start_time
-        print(f'Function {func.__name__}: {total_time:.4f}s')
-        return result
-    return timeit_wrapper
+def timeit(text):
+    """ Decorator for measuring the execution time. """
+    def decorator(func):
+        def innerFunc(*args, **kwargs):
+            start = time.time()
+            result = func(*args, **kwargs)
+            print(f"{text} {round(time.time() - start, 2)}")
+            return result
+        
+        return innerFunc
+    return decorator
