@@ -28,7 +28,7 @@ class VideoBuilderFfmpeg:
         result_name: str = "out.mp4", 
         duration: int = 3 * 60, 
         quiet: bool = True, 
-        width: int = -2, 
+        width: int = 1920, 
         height: int = 1080
         ):
         """
@@ -49,7 +49,10 @@ class VideoBuilderFfmpeg:
         # resize and store all resized videos in 'tmp'
         for path in os.listdir(folder_path):
             if path.endswith(".mp4"):
-                subprocess.run(["ffmpeg", "-i", os.path.join(folder_path, path), "-vf", f"scale={width}:{height}", os.path.join("tmp", path)], stderr=stdout)
+                subprocess.run(
+                    ["ffmpeg", "-i", os.path.join(folder_path, path), "-vf", f"scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:-1:-1:color=black", os.path.join("tmp", path)], 
+                    stderr=stdout
+                    )
         
         # take all filenames from 'tmp'
         videos = [path for path in os.listdir(folder_path)]
