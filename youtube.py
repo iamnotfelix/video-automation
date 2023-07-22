@@ -9,6 +9,7 @@ from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 
 class YoutubeController:
+    """ YoutubeController class provides communication with the YouTubeApi. """
 
     def __init__(self, client_secrets_file: str = "client_secret.json", api_service_name: str = "youtube", api_version: str = "v3" ) -> None:
         self.api_service_name = api_service_name
@@ -37,7 +38,7 @@ class YoutubeController:
         
         return credentials
 
-    def upload_video(self, video_path: str, title: str = "Default title", description: str = "Default description", tags: list[str] = []) -> None:
+    def upload_video(self, video_path: str, thumbnail_path: str, title: str = "Default title", description: str = "Default description", tags: list[str] = []) -> str:
 
         os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
         
@@ -45,6 +46,7 @@ class YoutubeController:
 
         youtube = googleapiclient.discovery.build(self.api_service_name, self.api_version, credentials=credentials)
 
+        # Uploading video
         request = youtube.videos().insert(
             part="snippet,status",
             body={
@@ -64,7 +66,13 @@ class YoutubeController:
         response = request.execute()
 
         print(response)
+
+        video_id = response['id']
+        self.set_thumbnail(video_id, thumbnail_path)        
+
         print("Uploaded succesfully!")
+
+        return video_id
 
     def get_video_ids(self, channel_id: str) -> list[str]:
         os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
@@ -90,7 +98,6 @@ class YoutubeController:
             playlistId = uploads_id,
             maxResults = 50
         )
-
         response = request.execute()
 
         # Store video ids from the first call
@@ -111,18 +118,18 @@ class YoutubeController:
 
         return video_ids
     
-    def set_thumbnail(self, video_id: str, file_path: str):
+    def set_thumbnail(self, video_id: str, file_path: str) -> None:
         os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
         
         credentials = self.get_credentials()
 
         youtube = googleapiclient.discovery.build(self.api_service_name, self.api_version, credentials=credentials)
 
+        # Setting the thumbnail
         request = youtube.thumbnails().set(
             videoId = video_id,
             media_body = MediaFileUpload(file_path)
         )
-
         response = request.execute()
 
         print(response)
