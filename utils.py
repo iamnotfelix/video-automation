@@ -18,7 +18,7 @@ def timeit(text):
         def innerFunc(*args, **kwargs):
             start = time.time()
             result = func(*args, **kwargs)
-            print(f"{text} {round(time.time() - start, 2)}")
+            print(f"{text} {round(time.time() - start, 2)}s")
             return result
         
         return innerFunc
