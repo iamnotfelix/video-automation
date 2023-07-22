@@ -118,6 +118,50 @@ class YoutubeController:
 
         return video_ids
     
+    def get_video_titles(self, channel_id: str) -> list[str]:
+        os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
+        
+        credentials = self.get_credentials()
+
+        youtube = googleapiclient.discovery.build(self.api_service_name, self.api_version, credentials=credentials)
+
+        # Get info about channel
+        request = youtube.channels().list(
+            part = "contentDetails",
+            id = channel_id
+        )
+        
+        response = request.execute()
+        
+        # Get the id of the uploads playlist
+        uploads_id = response['items'][0]['contentDetails']['relatedPlaylists']['uploads']
+
+        # Get the first page of videos
+        request = youtube.playlistItems().list(
+            part = "snippet",
+            playlistId = uploads_id,
+            maxResults = 50
+        )
+        response = request.execute()
+
+        # Store titles from the first call
+        titles = [item['snippet']['title'] for item in response['items']]
+        
+        # Repeat process for next pages
+        while "nextPageToken" in response:
+            nextPageToken = response["nextPageToken"]
+            request = youtube.playlistItems().list(
+                part = "snippet",
+                pageToken = nextPageToken,
+                playlistId = uploads_id,
+                maxResults = 50
+            )
+
+            response = request.execute()
+            titles.extend([item['snippet']['title'] for item in response['items']])
+
+        return titles
+    
     def set_thumbnail(self, video_id: str, file_path: str) -> None:
         os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
         
@@ -139,4 +183,5 @@ class YoutubeController:
 if __name__ == "__main__":
     youtube = YoutubeController()
     # youtube.upload_video("./results/result1.mp4")
+    # print(youtube.get_video_titles("UCJlxrVg_KbrVJIR3zoUlWxQ"))
     # youtube.set_thumbnail("iWqBq-ED62Y", "./thumbnails/fd8b41e8-f473-47bf-b41f-e52ce2fd21ae.jpeg")
