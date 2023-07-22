@@ -14,7 +14,8 @@ class YoutubeController:
         self.api_service_name = api_service_name
         self.api_version = api_version
         self.client_secrets_file = client_secrets_file
-        self.scopes = ["https://www.googleapis.com/auth/youtube.upload"]
+        self.scopes = ["https://www.googleapis.com/auth/youtube.upload", 
+                       "https://www.googleapis.com/auth/youtube.readonly"]
 
     def get_credentials(self):
         credentials = None
@@ -35,7 +36,6 @@ class YoutubeController:
                 token.write(credentials.to_json())
         
         return credentials
-
 
     def upload_video(self, video_path: str, title: str = "Default title", description: str = "Default description", tags: list[str] = []) -> None:
 
@@ -65,6 +65,53 @@ class YoutubeController:
 
         print(response)
         print("Uploaded succesfully!")
+
+    def get_video_ids(self, channel_id: str) -> list[str]:
+        os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
+        
+        credentials = self.get_credentials()
+
+        youtube = googleapiclient.discovery.build(self.api_service_name, self.api_version, credentials=credentials)
+
+        # Get info about channel
+        request = youtube.channels().list(
+            part = "contentDetails",
+            id = channel_id
+        )
+        
+        response = request.execute()
+        
+        # Get the id of the uploads playlist
+        uploads_id = response['items'][0]['contentDetails']['relatedPlaylists']['uploads']
+
+        # Get the first page of videos
+        request = youtube.playlistItems().list(
+            part = "snippet",
+            playlistId = uploads_id,
+            maxResults = 50
+        )
+
+        response = request.execute()
+
+        # Store video ids from the first call
+        video_ids = [item['snippet']['resourceId']['videoId'] for item in response['items']]
+        
+        # Repeat process for next pages
+        while "nextPageToken" in response:
+            nextPageToken = response["nextPageToken"]
+            request = youtube.playlistItems().list(
+                part = "snippet",
+                pageToken = nextPageToken,
+                playlistId = uploads_id,
+                maxResults = 50
+            )
+
+            response = request.execute()
+            video_ids.extend([item['snippet']['resourceId']['videoId'] for item in response['items']])
+
+        return video_ids
+
+
 
 if __name__ == "__main__":
     youtube = YoutubeController()
