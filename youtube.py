@@ -110,9 +110,26 @@ class YoutubeController:
             video_ids.extend([item['snippet']['resourceId']['videoId'] for item in response['items']])
 
         return video_ids
+    
+    def set_thumbnail(self, video_id: str, file_path: str):
+        os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
+        
+        credentials = self.get_credentials()
+
+        youtube = googleapiclient.discovery.build(self.api_service_name, self.api_version, credentials=credentials)
+
+        request = youtube.thumbnails().set(
+            videoId = video_id,
+            media_body = MediaFileUpload(file_path)
+        )
+
+        response = request.execute()
+
+        print(response)
 
 
 
 if __name__ == "__main__":
     youtube = YoutubeController()
-    youtube.upload_video("./results/result1.mp4")
+    # youtube.upload_video("./results/result1.mp4")
+    # youtube.set_thumbnail("iWqBq-ED62Y", "./thumbnails/fd8b41e8-f473-47bf-b41f-e52ce2fd21ae.jpeg")
