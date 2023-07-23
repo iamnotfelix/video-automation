@@ -2,6 +2,7 @@ import os
 
 from datetime import datetime
 from instagram_scrapper import InstagramScrapper
+from settings import Settings
 from thumbnail_scrapper import ThumbnailScrapper
 from title_manager import TitleManager
 from video_builder_ffmpeg import VideoBuilderFfmpeg
@@ -10,42 +11,30 @@ from youtube import YoutubeController
 from utils import timeit
 
 
-SOURCE_PATH = "sources.txt"     # path to file containing instagram usernames to scrape from
-TARGET_PATH = "./results"       # path to folder where the final videos will be
-VIDEOS_PATH = "./archive"       # path to folder where the scrapped videos will end up
-USE_FFMPEG = True               # change to False if you want to use moviepy(slower than ffmpeg)
-DURATION = 5 * 60               # the length of the result videos in seconds (i.e. 10 * 60 = 600 = 10 minutes)
-RESULT_NAME = "out.mp4"         # name of the resulted video
-VIDEO_DESCRIPTION = "Test description"          # descripttion of the video
-VIDEO_TAGS = []                 # tags for the video
-
-
-# TODO: change sources file type to json
-# TODO: make a common JSON that stores settings like: all titles, description, duration, tags etc.
 # TODO: add some kind of water mark and intro video
+# TODO: add dates to settings
 # TODO: change the script so the scrape date can be choosen or the scrapper
 #       scrapes from the last 24 hours
-# TODO: make a script for manual use (that asks for user input) ? cli would be better
 # TODO: do not print response in youtube module, instead do something else with it
 # TODO: create the folders, in remote repo, where the stuff gets scrapped (investigate if necessary or not)
 # TODO: put stuff in try catch (calls to api and other stuff that can fail)
+# TODO: make CLI
 
+settings = Settings()
 
 @timeit("Scrapping videos took ")
 def scrapping():
     print("Started scrapping...")
     insta = InstagramScrapper()
 
-    # Open text file containing pages to scrape
-    with open(SOURCE_PATH, "r") as f:
-        lines = f.readlines()
-        for line in lines:
-            user = line.strip("\n ")
-            @timeit(f"Scrapping {line}")
-            def tmp():
-                videos = insta.get_videos_from_interval(user, datetime(2023, 7, 20), datetime.now())
-                insta.download_videos(videos, "archive", user)
-            tmp()
+    # iterating over sources and downloading videos
+    for source in settings.get_sources():
+        user = source.strip("\n ")
+        @timeit(f"Scrapping {source}")
+        def tmp():
+            videos = insta.get_videos_from_interval(user, datetime(2023, 7, 20), datetime.now())
+            insta.download_videos(videos, "archive", user)
+        tmp()
 
 @timeit("Building video with ffmpeg took ")
 def building_video_ffmpeg():
@@ -53,10 +42,10 @@ def building_video_ffmpeg():
     builder = VideoBuilderFfmpeg()
     
     builder.concat_videos_from_folder(
-        folder_path=VIDEOS_PATH,
-        target_path=TARGET_PATH,
-        result_name=RESULT_NAME,
-        duration=DURATION,
+        folder_path=settings.get_archive_path(),
+        target_path=settings.get_result_path(),
+        result_name=settings.get_result_name(),
+        duration=settings.get_duration(),
         quiet=True
     )
 
@@ -66,7 +55,7 @@ def building_video_moviepy():
     builder = VideoBuilderMoviePy()
 
     # Pull videos from folder and resize them
-    videos = builder.get_videos_from_folder(VIDEOS_PATH, 1920, 1080)
+    videos = builder.get_videos_from_folder(settings.get_archive_path(), 1920, 1080)
 
     # Shuffle videos
     builder.shuffle_videos(videos)
@@ -77,7 +66,7 @@ def building_video_moviepy():
     for video in videos:
         duration += video.duration
         choosen_videos.append(video)
-        if duration >= DURATION:
+        if duration >= settings.get_duration():
             break
 
     # Build the final video from the choosen videos
@@ -88,17 +77,17 @@ def upload_video():
     print("Starting uploading video...")
     youtube = YoutubeController()
     thumbnails = ThumbnailScrapper()
-    titles = TitleManager()
+    titles = TitleManager(settings, youtube)
 
     thumbnail_path = thumbnails.choose_random_thumbnail()
     title = titles.choose_random_title()
 
     youtube.upload_video(
-        os.path.join(TARGET_PATH, RESULT_NAME),
+        os.path.join(settings.get_result_path(), settings.get_result_name()),
         thumbnail_path,
         title,
-        VIDEO_DESCRIPTION,
-        VIDEO_TAGS    
+        settings.get_description(),
+        settings.get_tags()
     )
 
 @timeit("Everything took ")
