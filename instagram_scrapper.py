@@ -1,5 +1,6 @@
 from datetime import datetime
 from itertools import dropwhile, takewhile
+import uuid
 from instaloader import instaloader as ig
 from instaloader import Post
 
@@ -18,10 +19,8 @@ class InstagramScrapper:
     def download_videos(self, posts: list[Post], target_path: str, name_pattern: str) -> None:
         self.loader.download_pictures = False
         self.loader.post_metadata_txt_pattern = ""
-        index = 1
         for post in posts:
-            self.loader.filename_pattern = name_pattern + str(index)
-            index += 1
+            self.loader.filename_pattern = name_pattern + "_" + str(uuid.uuid4())
             self.loader.download_post(post, target_path)
 
     # TODO: fix login
