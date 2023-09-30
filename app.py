@@ -1,6 +1,6 @@
 import os
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from instagram_scrapper import InstagramScrapper
 from settings import Settings
 from thumbnail_scrapper import ThumbnailScrapper
@@ -10,6 +10,8 @@ from video_builder_moviepy import VideoBuilderMoviePy
 from youtube import YoutubeController
 from utils import timeit
 
+# TODO: handle any kind of exception
+# TODO: make script run 24/7
 
 # TODO: add some kind of water mark and intro video
 # TODO: add dates to settings
@@ -32,7 +34,7 @@ def scrapping():
         user = source.strip("\n ")
         @timeit(f"Scrapping {source}")
         def tmp():
-            videos = insta.get_videos_from_interval(user, datetime(2023, 7, 20), datetime.now())
+            videos = insta.get_videos_from_interval(user, datetime.now() - timedelta(days=1), datetime.now())
             insta.download_videos(videos, "archive", user)
         tmp()
 
